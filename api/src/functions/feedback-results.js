@@ -1,7 +1,6 @@
 const { app } = require("@azure/functions");
 const { getFeedbackTableClient } = require("../lib/feedback-store");
 
-const ADMIN_ROLE = "feedback_admin";
 const ALLOWED_PERIODS = new Set([7, 30, 90]);
 const ALLOWED_RATINGS = new Set(["all", "positive", "negative"]);
 const MAX_RESULTS = 500;
@@ -17,9 +16,24 @@ function parseClientPrincipal(request) {
   }
 }
 
-function hasAdminRole(request) {
+function getApprovedAdminEmails(value = process.env.FEEDBACK_ADMIN_EMAILS || "") {
+  return new Set(value
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean));
+}
+
+function hasAdminAccess(request) {
   const principal = parseClientPrincipal(request);
-  return Array.isArray(principal?.userRoles) && principal.userRoles.includes(ADMIN_ROLE);
+  const isAuthenticated = Array.isArray(principal?.userRoles)
+    && principal.userRoles.includes("authenticated");
+  const isMicrosoftAccount = principal?.identityProvider?.toLowerCase() === "aad";
+  const email = principal?.userDetails?.trim().toLowerCase();
+
+  return Boolean(isAuthenticated
+    && isMicrosoftAccount
+    && email
+    && getApprovedAdminEmails().has(email));
 }
 
 function getQueryOptions(request) {
@@ -47,7 +61,7 @@ function getPartitionKeys(days, now = new Date()) {
 }
 
 async function feedbackResultsHandler(request, context) {
-  if (!hasAdminRole(request)) {
+  if (!hasAdminAccess(request)) {
     return {
       status: 403,
       headers: { "Cache-Control": "no-store" },
@@ -119,8 +133,9 @@ app.http("feedback-results", {
 
 module.exports = {
   feedbackResultsHandler,
+  getApprovedAdminEmails,
   getPartitionKeys,
   getQueryOptions,
-  hasAdminRole,
+  hasAdminAccess,
   parseClientPrincipal
 };

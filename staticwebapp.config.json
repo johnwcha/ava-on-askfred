@@ -6,12 +6,12 @@
     },
     {
       "route": "/feedback-results.html",
-      "allowedRoles": ["feedback_admin"]
+      "allowedRoles": ["authenticated"]
     },
     {
       "route": "/api/feedback-results",
       "methods": ["GET"],
-      "allowedRoles": ["feedback_admin"]
+      "allowedRoles": ["authenticated"]
     }
   ],
   "platform": {
