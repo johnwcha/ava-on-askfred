@@ -39,9 +39,20 @@
         border: 1px solid rgb(0 83 94 / 0.2);
         border-radius: 12px;
         color: rgb(0, 83, 94);
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
         transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+      }
+
+      .admin-action[data-mode="sign-in"] {
+        width: auto;
+        gap: 8px;
+        padding: 0 14px;
+        font-size: 0.9rem;
+        font-weight: 650;
+        white-space: nowrap;
       }
 
       .admin-action:hover {
@@ -60,6 +71,7 @@
       }
 
       .admin-action-icon {
+        flex: 0 0 auto;
         width: 24px;
         height: 24px;
       }
@@ -392,6 +404,10 @@
           padding: 0 20px;
         }
 
+        .logo {
+          width: min(200px, 42vw);
+        }
+
         main {
           min-height: calc(100vh - 72px);
           padding: 40px 20px 120px;
@@ -429,6 +445,7 @@
           <circle cx="10" cy="6.5" r="1.5" fill="currentColor"/>
           <circle cx="16" cy="2.75" r="1.5" fill="currentColor"/>
         </svg>
+        <span id="admin-action-text">Admin sign in</span>
       </a>
     </header>
 
@@ -490,6 +507,7 @@
         const feedbackStatus = document.querySelector(".feedback-status");
         const feedbackSubmit = document.querySelector(".feedback-submit");
         const adminAction = document.querySelector("#admin-action");
+        const adminActionText = document.querySelector("#admin-action-text");
         const ratingButtons = document.querySelectorAll("[data-feedback-rating]");
         let selectedRating = null;
         let pendingRequestId = null;
@@ -505,6 +523,8 @@
             : "/.auth/login/aad?post_login_redirect_uri=/";
           adminAction.setAttribute("aria-label", isAdmin ? "View feedback results" : "Admin sign in");
           adminAction.title = isAdmin ? "View feedback results" : "Admin sign in";
+          adminAction.dataset.mode = isAdmin ? "results" : "sign-in";
+          adminActionText.hidden = isAdmin;
           adminAction.hidden = false;
         }
 
