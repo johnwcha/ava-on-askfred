@@ -1,13 +1,10 @@
 const { randomUUID } = require("node:crypto");
 const { app } = require("@azure/functions");
-const { TableClient } = require("@azure/data-tables");
+const { getFeedbackTableClient } = require("../lib/feedback-store");
 
-const DEFAULT_TABLE_NAME = "AvaFeedback";
 const MAX_COMMENT_LENGTH = 1000;
 const VALID_RATINGS = new Set(["positive", "negative"]);
 const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-let tableClientPromise;
 
 function validateFeedback(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -41,22 +38,6 @@ function validateFeedback(payload) {
   };
 }
 
-async function getTableClient() {
-  if (!tableClientPromise) {
-    tableClientPromise = (async () => {
-      const connectionString = process.env.FEEDBACK_STORAGE_CONNECTION_STRING;
-      if (!connectionString) throw new Error("FEEDBACK_STORAGE_CONNECTION_STRING is not configured.");
-
-      const tableName = process.env.FEEDBACK_TABLE_NAME || DEFAULT_TABLE_NAME;
-      const client = TableClient.fromConnectionString(connectionString, tableName);
-      await client.createTable();
-      return client;
-    })();
-  }
-
-  return tableClientPromise;
-}
-
 async function feedbackHandler(request, context) {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.toLowerCase().includes("application/json")) {
@@ -79,7 +60,7 @@ async function feedbackHandler(request, context) {
   const partitionKey = submittedAt.slice(0, 7);
 
   try {
-    const client = await getTableClient();
+    const client = await getFeedbackTableClient();
     await client.createEntity({
       partitionKey,
       rowKey,

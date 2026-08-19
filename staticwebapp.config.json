@@ -1,4 +1,19 @@
 {
+  "routes": [
+    {
+      "route": "/feedback-admin",
+      "redirect": "/.auth/login/aad?post_login_redirect_uri=/feedback-results.html"
+    },
+    {
+      "route": "/feedback-results.html",
+      "allowedRoles": ["feedback_admin"]
+    },
+    {
+      "route": "/api/feedback-results",
+      "methods": ["GET"],
+      "allowedRoles": ["feedback_admin"]
+    }
+  ],
   "platform": {
     "apiRuntime": "node:22"
   }

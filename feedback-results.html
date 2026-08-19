@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AVA Feedback Results | West Coast University</title>
+    <style>
+      * { box-sizing: border-box; }
+
+      :root {
+        --teal: #00535e;
+        --teal-dark: #003f47;
+        --orange: #ea7125;
+        --ink: #173a3f;
+        --muted: #637a7e;
+        --canvas: #eef4f3;
+        --surface: #ffffff;
+        --soft: #f5f9f8;
+        --line: #d5e2e0;
+        --danger: #b42318;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .appbar {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 0 clamp(20px, 4vw, 52px);
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+      }
+
+      .logo { display: block; width: min(235px, 57vw); height: auto; }
+      .account { display: flex; align-items: center; gap: 15px; color: var(--muted); font-size: 0.75rem; }
+      .sign-out { color: var(--teal); font-weight: 750; text-decoration: none; }
+      .sign-out:hover { text-decoration: underline; }
+
+      main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 38px 0 64px; }
+      .heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; }
+      .kicker { margin: 0 0 6px; color: var(--orange); font-size: 0.72rem; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+      h1 { margin: 0; color: var(--teal-dark); font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -.04em; }
+      .subtitle { margin: 9px 0 0; color: var(--muted); font-size: 0.85rem; }
+
+      .controls { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+      .control label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      select,
+      input[type="search"] {
+        height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 0 12px;
+        background: var(--surface);
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.78rem;
+        outline: none;
+      }
+
+      input[type="search"] { width: 205px; }
+      select:focus,
+      input[type="search"]:focus,
+      button:focus-visible,
+      a:focus-visible { outline: 3px solid rgb(234 113 37 / .38); outline-offset: 2px; }
+
+      .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+      .metric { padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+      .metric-label { display: block; color: var(--muted); font-size: 0.72rem; font-weight: 750; }
+      .metric-value { display: block; margin-top: 7px; color: var(--teal-dark); font-size: 2rem; line-height: 1; letter-spacing: -.04em; }
+      .metric-detail { display: block; margin-top: 7px; color: var(--muted); font-size: 0.72rem; }
+
+      .panel { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+      .chart-panel { margin-top: 14px; padding: 20px 22px 15px; }
+      .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+      .panel-title { margin: 0; font-size: 0.9rem; }
+      .legend { display: flex; gap: 15px; color: var(--muted); font-size: 0.68rem; }
+      .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; background: var(--teal); }
+      .legend .negative::before { background: var(--orange); }
+
+      .chart { height: 142px; display: flex; align-items: flex-end; gap: clamp(8px, 2vw, 26px); margin-top: 16px; border-bottom: 1px solid var(--line); }
+      .chart-day { position: relative; height: 100%; display: flex; flex: 1; align-items: flex-end; justify-content: center; gap: 3px; }
+      .chart-bar { width: min(15px, 38%); min-height: 2px; border-radius: 4px 4px 0 0; background: var(--teal); }
+      .chart-bar.negative { background: var(--orange); }
+      .chart-label { position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); color: var(--muted); font-size: 0.62rem; white-space: nowrap; }
+      .chart-empty { align-self: center; width: 100%; color: var(--muted); font-size: 0.8rem; text-align: center; }
+
+      .table-panel { margin-top: 32px; overflow: hidden; }
+      .table-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 20px; border-bottom: 1px solid var(--line); }
+      .table-title { margin: 0; font-size: 0.9rem; }
+      .response-count { margin-left: 7px; color: var(--muted); font-size: 0.72rem; font-weight: 650; }
+      .refresh { border: 0; padding: 5px 0; color: var(--teal); background: transparent; font: inherit; font-size: 0.75rem; font-weight: 750; cursor: pointer; }
+      .table-scroll { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      th { padding: 11px 15px; color: var(--muted); background: var(--soft); font-size: 0.65rem; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+      td { padding: 14px 15px; border-top: 1px solid var(--line); font-size: 0.75rem; vertical-align: top; }
+      tbody tr:first-child td { border-top: 0; }
+      tbody tr { cursor: pointer; }
+      tbody tr:hover,
+      tbody tr.is-selected { background: #f1f8f7; }
+      .rating-icon { font-size: 1.1rem; }
+      .comment { display: -webkit-box; overflow: hidden; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .no-comment { color: var(--muted); font-style: italic; }
+      .chat-state { color: var(--muted); }
+
+      .detail { display: none; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 18px 20px; border-top: 1px solid var(--line); background: var(--soft); }
+      .detail.is-visible { display: flex; }
+      .detail-label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 0.66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+      .detail-comment { margin: 0; max-width: 850px; font-size: 0.78rem; line-height: 1.55; }
+      .detail-meta { margin: 9px 0 0; color: var(--muted); font-size: 0.68rem; }
+      .detail-close { width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; }
+
+      .state { padding: 50px 24px; color: var(--muted); text-align: center; font-size: 0.82rem; }
+      .state[hidden] { display: none; }
+      .state strong { display: block; margin-bottom: 6px; color: var(--ink); font-size: 0.95rem; }
+      .state.is-error strong { color: var(--danger); }
+      .state a { color: var(--teal); font-weight: 750; }
+      .truncated { display: none; margin: 12px 0 0; color: var(--muted); font-size: 0.72rem; text-align: right; }
+
+      @media (max-width: 780px) {
+        .appbar { height: 68px; padding: 0 18px; }
+        .account-name { display: none; }
+        main { width: min(100% - 28px, 640px); padding-top: 26px; }
+        .heading-row { display: block; }
+        .controls { justify-content: flex-start; margin-top: 20px; }
+        input[type="search"] { min-width: 0; flex: 1; }
+        .summary { grid-template-columns: 1fr; }
+        .chart-panel { padding-inline: 14px; }
+        .chart-day:nth-child(even) .chart-label { display: none; }
+        table { min-width: 700px; }
+        .detail.is-visible { display: block; }
+        .detail-close { float: right; margin-left: 12px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { scroll-behavior: auto !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="appbar">
+      <img class="logo" src="wcu-torch-logo-teal.svg" alt="West Coast University">
+      <div class="account"><span class="account-name" id="account-name">Feedback administrator</span><a class="sign-out" href="/.auth/logout?post_logout_redirect_uri=/">Sign out</a></div>
+    </header>
+
+    <main>
+      <div class="heading-row">
+        <div>
+          <p class="kicker">AVA insights</p>
+          <h1>Feedback results</h1>
+          <p class="subtitle">Survey responses from the AVA landing page</p>
+        </div>
+        <div class="controls" aria-label="Filter responses">
+          <div class="control">
+            <label for="period">Date range</label>
+            <select id="period"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select>
+          </div>
+          <div class="control">
+            <label for="rating-filter">Rating</label>
+            <select id="rating-filter"><option value="all">All ratings</option><option value="positive">Thumbs up</option><option value="negative">Thumbs down</option></select>
+          </div>
+          <div class="control">
+            <label for="search">Search comments</label>
+            <input id="search" type="search" placeholder="Search comments">
+          </div>
+        </div>
+      </div>
+
+      <section class="summary" aria-label="Feedback summary">
+        <div class="metric"><span class="metric-label">Responses</span><strong class="metric-value" id="total">—</strong><span class="metric-detail">In selected period</span></div>
+        <div class="metric"><span class="metric-label">Positive experience</span><strong class="metric-value" id="positive">—</strong><span class="metric-detail" id="positive-detail">Loading</span></div>
+        <div class="metric"><span class="metric-label">Written comments</span><strong class="metric-value" id="comments">—</strong><span class="metric-detail" id="comments-detail">Loading</span></div>
+      </section>
+
+      <section class="panel chart-panel" aria-labelledby="chart-title">
+        <div class="panel-heading"><h2 class="panel-title" id="chart-title">Responses over time</h2><div class="legend"><span>Thumbs up</span><span class="negative">Thumbs down</span></div></div>
+        <div class="chart" id="chart" aria-label="Daily feedback response counts"><div class="chart-empty">Loading responses…</div></div>
+      </section>
+
+      <section class="panel table-panel" aria-labelledby="table-title">
+        <div class="table-heading"><h2 class="table-title" id="table-title">Recent responses <span class="response-count" id="response-count"></span></h2><button class="refresh" id="refresh" type="button">Refresh</button></div>
+        <div class="state" id="loading-state"><strong>Loading feedback</strong>Retrieving responses from AVA.</div>
+        <div class="state is-error" id="error-state" hidden><strong>Feedback couldn’t be loaded</strong><span id="error-message">Try refreshing this page.</span></div>
+        <div class="state" id="empty-state" hidden><strong>No responses found</strong>Adjust the filters or check again after feedback is submitted.</div>
+        <div class="table-scroll" id="table-scroll" hidden>
+          <table>
+            <thead><tr><th style="width:90px">Rating</th><th style="width:45%">Comment</th><th style="width:150px">Submitted</th><th style="width:110px">Chat state</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="detail" id="detail"><div><span class="detail-label">Full response</span><p class="detail-comment" id="detail-comment"></p><p class="detail-meta" id="detail-meta"></p></div><button class="detail-close" id="detail-close" type="button" aria-label="Close response detail">×</button></div>
+      </section>
+      <p class="truncated" id="truncated">Showing the 500 most recent responses for this period.</p>
+    </main>
+
+    <script>
+      (() => {
+        const period = document.querySelector("#period");
+        const ratingFilter = document.querySelector("#rating-filter");
+        const search = document.querySelector("#search");
+        const rows = document.querySelector("#rows");
+        const chart = document.querySelector("#chart");
+        const loadingState = document.querySelector("#loading-state");
+        const errorState = document.querySelector("#error-state");
+        const emptyState = document.querySelector("#empty-state");
+        const tableScroll = document.querySelector("#table-scroll");
+        const detail = document.querySelector("#detail");
+        const detailComment = document.querySelector("#detail-comment");
+        const detailMeta = document.querySelector("#detail-meta");
+        const truncated = document.querySelector("#truncated");
+        let responses = [];
+
+        const dateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        const dayFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
+        function filteredResponses() {
+          const query = search.value.trim().toLowerCase();
+          return responses.filter((item) => !query || item.comment.toLowerCase().includes(query));
+        }
+
+        function renderSummary(items) {
+          const positiveCount = items.filter((item) => item.rating === "positive").length;
+          const commentCount = items.filter((item) => item.comment).length;
+          document.querySelector("#total").textContent = items.length;
+          document.querySelector("#positive").textContent = items.length ? `${Math.round(positiveCount / items.length * 100)}%` : "—";
+          document.querySelector("#positive-detail").textContent = `${positiveCount} thumbs up`;
+          document.querySelector("#comments").textContent = commentCount;
+          document.querySelector("#comments-detail").textContent = `${items.length ? Math.round(commentCount / items.length * 100) : 0}% of responses`;
+          document.querySelector("#response-count").textContent = `${items.length} shown`;
+        }
+
+        function renderChart(items) {
+          const groups = new Map();
+          items.forEach((item) => {
+            const key = item.submittedAt.slice(0, 10);
+            if (!groups.has(key)) groups.set(key, { positive: 0, negative: 0 });
+            groups.get(key)[item.rating] += 1;
+          });
+          const entries = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
+          chart.replaceChildren();
+
+          if (!entries.length) {
+            const message = document.createElement("div");
+            message.className = "chart-empty";
+            message.textContent = "No response activity for this selection.";
+            chart.append(message);
+            return;
+          }
+
+          const maximum = Math.max(1, ...entries.flatMap(([, values]) => [values.positive, values.negative]));
+          entries.forEach(([date, values]) => {
+            const day = document.createElement("div");
+            day.className = "chart-day";
+            ["positive", "negative"].forEach((rating) => {
+              const bar = document.createElement("span");
+              bar.className = `chart-bar ${rating === "negative" ? "negative" : ""}`;
+              bar.style.height = `${Math.max(2, values[rating] / maximum * 108)}px`;
+              bar.title = `${values[rating]} ${rating === "positive" ? "thumbs up" : "thumbs down"}`;
+              day.append(bar);
+            });
+            const label = document.createElement("span");
+            label.className = "chart-label";
+            label.textContent = dayFormatter.format(new Date(`${date}T12:00:00Z`));
+            day.append(label);
+            chart.append(day);
+          });
+        }
+
+        function showDetail(item, row) {
+          rows.querySelectorAll("tr").forEach((candidate) => candidate.classList.toggle("is-selected", candidate === row));
+          detailComment.textContent = item.comment || "No written comment was provided.";
+          detailMeta.textContent = `${dateFormatter.format(new Date(item.submittedAt))} · ${item.chatOpen ? "Chat open" : "Chat closed"} · ${item.page}`;
+          detail.classList.add("is-visible");
+        }
+
+        function renderTable(items) {
+          rows.replaceChildren();
+          items.forEach((item) => {
+            const row = document.createElement("tr");
+            row.tabIndex = 0;
+            const ratingCell = document.createElement("td");
+            const rating = document.createElement("span");
+            rating.className = "rating-icon";
+            rating.setAttribute("aria-label", item.rating);
+            rating.textContent = item.rating === "positive" ? "👍" : "👎";
+            ratingCell.append(rating);
+            const commentCell = document.createElement("td");
+            const comment = document.createElement("span");
+            comment.className = `comment ${item.comment ? "" : "no-comment"}`;
+            comment.textContent = item.comment || "No written comment";
+            commentCell.append(comment);
+            const dateCell = document.createElement("td");
+            dateCell.textContent = dateFormatter.format(new Date(item.submittedAt));
+            const chatCell = document.createElement("td");
+            chatCell.className = "chat-state";
+            chatCell.textContent = item.chatOpen ? "Chat open" : "Chat closed";
+            row.append(ratingCell, commentCell, dateCell, chatCell);
+            row.addEventListener("click", () => showDetail(item, row));
+            row.addEventListener("keydown", (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                showDetail(item, row);
+              }
+            });
+            rows.append(row);
+          });
+        }
+
+        function render() {
+          const items = filteredResponses();
+          renderSummary(items);
+          renderChart(items);
+          renderTable(items);
+          emptyState.hidden = items.length > 0;
+          tableScroll.hidden = items.length === 0;
+          detail.classList.remove("is-visible");
+        }
+
+        async function loadUser() {
+          try {
+            const response = await fetch("/.auth/me", { cache: "no-store" });
+            const payload = await response.json();
+            if (payload.clientPrincipal?.userDetails) document.querySelector("#account-name").textContent = payload.clientPrincipal.userDetails;
+          } catch {
+            // The protected route already enforces access; the account label can remain generic.
+          }
+        }
+
+        async function loadResponses() {
+          loadingState.hidden = false;
+          errorState.hidden = true;
+          emptyState.hidden = true;
+          tableScroll.hidden = true;
+          detail.classList.remove("is-visible");
+          truncated.style.display = "none";
+
+          try {
+            const params = new URLSearchParams({ days: period.value, rating: ratingFilter.value });
+            const response = await fetch(`/api/feedback-results?${params}`, { cache: "no-store" });
+            if (!response.ok) {
+              if (response.status === 401 || response.status === 403) throw new Error("Your account does not have feedback administrator access.");
+              throw new Error("Try refreshing this page.");
+            }
+            const payload = await response.json();
+            responses = Array.isArray(payload.responses) ? payload.responses : [];
+            loadingState.hidden = true;
+            truncated.style.display = payload.truncated ? "block" : "none";
+            render();
+          } catch (error) {
+            responses = [];
+            loadingState.hidden = true;
+            errorState.hidden = false;
+            document.querySelector("#error-message").textContent = error.message;
+            renderSummary([]);
+            renderChart([]);
+          }
+        }
+
+        period.addEventListener("change", loadResponses);
+        ratingFilter.addEventListener("change", loadResponses);
+        search.addEventListener("input", render);
+        document.querySelector("#refresh").addEventListener("click", loadResponses);
+        document.querySelector("#detail-close").addEventListener("click", () => {
+          detail.classList.remove("is-visible");
+          rows.querySelectorAll("tr").forEach((row) => row.classList.remove("is-selected"));
+        });
+
+        loadUser();
+        loadResponses();
+      })();
+    </script>
+  </body>
+</html>
