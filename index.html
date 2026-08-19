@@ -187,6 +187,10 @@
         color: #ffffff;
       }
 
+      .feedback-rating.has-error button {
+        border-color: #b42318;
+      }
+
       .feedback-rating button:focus-visible,
       .feedback-comment:focus-visible,
       .feedback-submit:focus-visible {
@@ -249,6 +253,24 @@
       .feedback-submit:active {
         transform: translateY(2px);
         box-shadow: 0 2px 0 #bd5115;
+      }
+
+      .feedback-submit:disabled {
+        cursor: wait;
+        opacity: 0.72;
+      }
+
+      .feedback-status {
+        min-height: 1.4em;
+        margin: 12px 0 0;
+        color: #2b646b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+
+      .feedback-status.is-error {
+        color: #b42318;
       }
 
       body.chat-is-expanded .feedback-panel {
@@ -396,13 +418,13 @@
         </ul>
         <p>Ask me a question by clicking the widget icon in the bottom-right corner. I will cite the sources I use, and I can help you support student drafts. Right now, I am programmed to support online students only. Help us innovate by testing my database and exploring how your department could benefit from this resource in the future.</p>
 
-        <section class="feedback-panel" aria-labelledby="feedback-title">
+        <form class="feedback-panel" aria-labelledby="feedback-title" novalidate>
           <div class="feedback-header">
             <div>
               <h2 class="feedback-title" id="feedback-title">How was your experience with AVA?</h2>
               <p class="feedback-helper">Your feedback helps us make AVA more useful.</p>
             </div>
-            <div class="feedback-rating" role="group" aria-label="Rate your experience">
+            <div class="feedback-rating" role="group" aria-label="Rate your experience" aria-describedby="feedback-status">
               <button type="button" data-feedback-rating="positive" aria-label="Good experience" aria-pressed="false">👍</button>
               <button type="button" data-feedback-rating="negative" aria-label="Poor experience" aria-pressed="false">👎</button>
             </div>
@@ -411,9 +433,10 @@
           <textarea class="feedback-comment" id="feedback-comment" maxlength="1000" placeholder="Tell us what worked—or what we could improve."></textarea>
           <div class="feedback-footer">
             <span class="feedback-privacy">Please don’t include private student information.</span>
-            <button class="feedback-submit" type="button">Submit</button>
+            <button class="feedback-submit" type="submit">Submit</button>
           </div>
-        </section>
+          <p class="feedback-status" id="feedback-status" role="status" aria-live="polite"></p>
+        </form>
       </section>
     </main>
 
@@ -422,7 +445,13 @@
       (() => {
         const widgetOrigin = "https://platform.collegevine.com";
         const feedbackPanel = document.querySelector(".feedback-panel");
+        const feedbackComment = document.querySelector(".feedback-comment");
+        const feedbackRating = document.querySelector(".feedback-rating");
+        const feedbackStatus = document.querySelector(".feedback-status");
+        const feedbackSubmit = document.querySelector(".feedback-submit");
         const ratingButtons = document.querySelectorAll("[data-feedback-rating]");
+        let selectedRating = null;
+        let pendingRequestId = null;
         const radar = document.createElement("div");
         radar.className = "chat-radar is-hidden";
         radar.setAttribute("aria-hidden", "true");
@@ -430,10 +459,63 @@
 
         ratingButtons.forEach((button) => {
           button.addEventListener("click", () => {
+            selectedRating = button.dataset.feedbackRating;
+            feedbackRating.classList.remove("has-error");
+            feedbackStatus.classList.remove("is-error");
+            feedbackStatus.textContent = "";
             ratingButtons.forEach((ratingButton) => {
               ratingButton.setAttribute("aria-pressed", String(ratingButton === button));
             });
           });
+        });
+
+        feedbackPanel.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          if (!selectedRating) {
+            feedbackRating.classList.add("has-error");
+            feedbackStatus.classList.add("is-error");
+            feedbackStatus.textContent = "Choose thumbs up or thumbs down before submitting.";
+            ratingButtons[0]?.focus();
+            return;
+          }
+
+          pendingRequestId ||= globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+          feedbackSubmit.disabled = true;
+          feedbackSubmit.textContent = "Submitting…";
+          feedbackStatus.classList.remove("is-error");
+          feedbackStatus.textContent = "";
+
+          try {
+            const response = await fetch("/api/feedback", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Feedback-Id": pendingRequestId
+              },
+              body: JSON.stringify({
+                rating: selectedRating,
+                comment: feedbackComment.value.trim(),
+                page: window.location.pathname,
+                chatOpen: document.body.classList.contains("chat-is-expanded")
+              })
+            });
+
+            if (!response.ok) throw new Error(`Feedback request failed with ${response.status}`);
+
+            selectedRating = null;
+            pendingRequestId = null;
+            feedbackComment.value = "";
+            ratingButtons.forEach((button) => button.setAttribute("aria-pressed", "false"));
+            feedbackStatus.textContent = "Thank you. Your feedback was submitted.";
+          } catch (error) {
+            console.error("Unable to submit feedback", error);
+            feedbackStatus.classList.add("is-error");
+            feedbackStatus.textContent = "Feedback couldn’t be submitted. Please try again.";
+          } finally {
+            feedbackSubmit.disabled = false;
+            feedbackSubmit.textContent = "Submit";
+          }
         });
 
         function updateFeedbackPosition(rect, isExpanded) {
