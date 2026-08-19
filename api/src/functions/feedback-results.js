@@ -124,6 +124,21 @@ async function feedbackResultsHandler(request, context) {
   }
 }
 
+function feedbackAdminAccessHandler(request) {
+  if (!hasAdminAccess(request)) {
+    return {
+      status: 403,
+      headers: { "Cache-Control": "no-store" },
+      jsonBody: { error: "Feedback administrator access is required." }
+    };
+  }
+
+  return {
+    status: 204,
+    headers: { "Cache-Control": "no-store" }
+  };
+}
+
 app.http("feedback-results", {
   methods: ["GET"],
   authLevel: "anonymous",
@@ -131,7 +146,15 @@ app.http("feedback-results", {
   handler: feedbackResultsHandler
 });
 
+app.http("feedback-admin-access", {
+  methods: ["GET"],
+  authLevel: "anonymous",
+  route: "feedback-admin-access",
+  handler: feedbackAdminAccessHandler
+});
+
 module.exports = {
+  feedbackAdminAccessHandler,
   feedbackResultsHandler,
   getApprovedAdminEmails,
   getPartitionKeys,

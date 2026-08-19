@@ -12,6 +12,11 @@
       "route": "/api/feedback-results",
       "methods": ["GET"],
       "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/feedback-admin-access",
+      "methods": ["GET"],
+      "allowedRoles": ["authenticated"]
     }
   ],
   "platform": {

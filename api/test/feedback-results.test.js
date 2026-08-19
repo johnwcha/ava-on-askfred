@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  feedbackAdminAccessHandler,
   feedbackResultsHandler,
   getApprovedAdminEmails,
   getPartitionKeys,
@@ -57,6 +58,22 @@ test("rejects a matching email from a non-Microsoft provider", () => {
   const previousValue = process.env.FEEDBACK_ADMIN_EMAILS;
   process.env.FEEDBACK_ADMIN_EMAILS = "admin@example.edu";
   assert.equal(hasAdminAccess(requestWithPrincipal(["authenticated"], "admin@example.edu", "github")), false);
+  restoreAdminEmails(previousValue);
+});
+
+test("returns no content when an approved administrator checks access", () => {
+  const previousValue = process.env.FEEDBACK_ADMIN_EMAILS;
+  process.env.FEEDBACK_ADMIN_EMAILS = "admin@example.edu";
+  const response = feedbackAdminAccessHandler(requestWithPrincipal(["authenticated"]));
+  assert.equal(response.status, 204);
+  restoreAdminEmails(previousValue);
+});
+
+test("forbids an unapproved administrator access check", () => {
+  const previousValue = process.env.FEEDBACK_ADMIN_EMAILS;
+  process.env.FEEDBACK_ADMIN_EMAILS = "reviewer@example.edu";
+  const response = feedbackAdminAccessHandler(requestWithPrincipal(["authenticated"]));
+  assert.equal(response.status, 403);
   restoreAdminEmails(previousValue);
 });
 
