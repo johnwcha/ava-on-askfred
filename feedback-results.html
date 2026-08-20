@@ -257,15 +257,25 @@
           document.querySelector("#response-count").textContent = `${items.length} total`;
         }
 
-        function renderChart(items) {
+        function weekStartKey(date) {
+          const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+          const offsetFromMonday = (monday.getUTCDay() + 6) % 7;
+          monday.setUTCDate(monday.getUTCDate() - offsetFromMonday);
+          return monday.toISOString().slice(0, 10);
+        }
+
+        function renderChart(items, days = Number(period.value) || 30) {
+          const useWeekly = days > 7;
           const groups = new Map();
           items.forEach((item) => {
-            const key = item.submittedAt.slice(0, 10);
+            const submitted = new Date(item.submittedAt);
+            const key = useWeekly ? weekStartKey(submitted) : submitted.toISOString().slice(0, 10);
             if (!groups.has(key)) groups.set(key, { positive: 0, negative: 0 });
             groups.get(key)[item.rating] += 1;
           });
           const entries = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
           chart.replaceChildren();
+          chart.setAttribute("aria-label", useWeekly ? "Weekly feedback response counts" : "Daily feedback response counts");
 
           if (!entries.length) {
             const message = document.createElement("div");
@@ -276,7 +286,7 @@
           }
 
           const maximum = Math.max(1, ...entries.flatMap(([, values]) => [values.positive, values.negative]));
-          entries.forEach(([date, values]) => {
+          entries.forEach(([bucketStart, values]) => {
             const day = document.createElement("div");
             day.className = "chart-day";
             ["positive", "negative"].forEach((rating) => {
@@ -288,7 +298,15 @@
             });
             const label = document.createElement("span");
             label.className = "chart-label";
-            label.textContent = dayFormatter.format(new Date(`${date}T12:00:00Z`));
+            const startDate = new Date(`${bucketStart}T12:00:00Z`);
+            if (useWeekly) {
+              const endDate = new Date(startDate);
+              endDate.setUTCDate(endDate.getUTCDate() + 6);
+              label.textContent = dayFormatter.format(startDate);
+              label.title = `Week of ${dayFormatter.format(startDate)}–${dayFormatter.format(endDate)}`;
+            } else {
+              label.textContent = dayFormatter.format(startDate);
+            }
             day.append(label);
             chart.append(day);
           });
