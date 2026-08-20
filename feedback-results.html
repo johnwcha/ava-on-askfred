@@ -117,6 +117,14 @@
       .detail-meta { margin: 9px 0 0; color: var(--muted); font-size: 0.68rem; }
       .detail-close { width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; }
 
+      .pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 14px 20px; border-top: 1px solid var(--line); }
+      .pagination[hidden] { display: none; }
+      .pagination-info { color: var(--muted); font-size: 0.72rem; }
+      .pagination-controls { display: flex; gap: 8px; }
+      .pagination-btn { height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--teal); font: inherit; font-size: 0.75rem; font-weight: 750; cursor: pointer; }
+      .pagination-btn:hover:not(:disabled) { background: var(--soft); }
+      .pagination-btn:disabled { color: var(--muted); cursor: not-allowed; opacity: .6; }
+
       .state { padding: 50px 24px; color: var(--muted); text-align: center; font-size: 0.82rem; }
       .state[hidden] { display: none; }
       .state strong { display: block; margin-bottom: 6px; color: var(--ink); font-size: 0.95rem; }
@@ -196,6 +204,13 @@
           </table>
         </div>
         <div class="detail" id="detail"><div><span class="detail-label">Full response</span><p class="detail-comment" id="detail-comment"></p><p class="detail-meta" id="detail-meta"></p></div><button class="detail-close" id="detail-close" type="button" aria-label="Close response detail">×</button></div>
+        <div class="pagination" id="pagination" hidden>
+          <span class="pagination-info" id="pagination-info"></span>
+          <div class="pagination-controls">
+            <button class="pagination-btn" id="prev-page" type="button">Previous</button>
+            <button class="pagination-btn" id="next-page" type="button">Next</button>
+          </div>
+        </div>
       </section>
       <p class="truncated" id="truncated">Showing the 500 most recent responses for this period.</p>
     </main>
@@ -215,7 +230,13 @@
         const detailComment = document.querySelector("#detail-comment");
         const detailMeta = document.querySelector("#detail-meta");
         const truncated = document.querySelector("#truncated");
+        const pagination = document.querySelector("#pagination");
+        const paginationInfo = document.querySelector("#pagination-info");
+        const prevPageButton = document.querySelector("#prev-page");
+        const nextPageButton = document.querySelector("#next-page");
+        const PAGE_SIZE = 25;
         let responses = [];
+        let currentPage = 1;
 
         const dateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         const dayFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -233,7 +254,7 @@
           document.querySelector("#positive-detail").textContent = `${positiveCount} thumbs up`;
           document.querySelector("#comments").textContent = commentCount;
           document.querySelector("#comments-detail").textContent = `${items.length ? Math.round(commentCount / items.length * 100) : 0}% of responses`;
-          document.querySelector("#response-count").textContent = `${items.length} shown`;
+          document.querySelector("#response-count").textContent = `${items.length} total`;
         }
 
         function renderChart(items) {
@@ -281,8 +302,13 @@
         }
 
         function renderTable(items) {
+          const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+          if (currentPage > totalPages) currentPage = totalPages;
+          const start = (currentPage - 1) * PAGE_SIZE;
+          const pageItems = items.slice(start, start + PAGE_SIZE);
+
           rows.replaceChildren();
-          items.forEach((item) => {
+          pageItems.forEach((item) => {
             const row = document.createElement("tr");
             row.tabIndex = 0;
             const ratingCell = document.createElement("td");
@@ -311,9 +337,17 @@
             });
             rows.append(row);
           });
+
+          pagination.hidden = items.length === 0;
+          const rangeStart = items.length ? start + 1 : 0;
+          const rangeEnd = start + pageItems.length;
+          paginationInfo.textContent = items.length ? `Showing ${rangeStart}–${rangeEnd} of ${items.length}` : "";
+          prevPageButton.disabled = currentPage <= 1;
+          nextPageButton.disabled = currentPage >= totalPages;
         }
 
-        function render() {
+        function render({ resetPage = true } = {}) {
+          if (resetPage) currentPage = 1;
           const items = filteredResponses();
           renderSummary(items);
           renderChart(items);
@@ -366,6 +400,14 @@
         period.addEventListener("change", loadResponses);
         ratingFilter.addEventListener("change", loadResponses);
         search.addEventListener("input", render);
+        prevPageButton.addEventListener("click", () => {
+          currentPage -= 1;
+          render({ resetPage: false });
+        });
+        nextPageButton.addEventListener("click", () => {
+          currentPage += 1;
+          render({ resetPage: false });
+        });
         document.querySelector("#refresh").addEventListener("click", loadResponses);
         document.querySelector("#detail-close").addEventListener("click", () => {
           detail.classList.remove("is-visible");
