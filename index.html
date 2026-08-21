@@ -32,6 +32,50 @@
         height: auto;
       }
 
+      .admin-action {
+        width: 44px;
+        height: 44px;
+        margin-left: auto;
+        border: 1px solid rgb(0 83 94 / 0.2);
+        border-radius: 12px;
+        color: rgb(0, 83, 94);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+      }
+
+      .admin-action[data-mode="sign-in"] {
+        width: auto;
+        gap: 8px;
+        padding: 0 14px;
+        font-size: 0.9rem;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .admin-action:hover {
+        border-color: rgb(0 83 94 / 0.42);
+        background: rgb(0 83 94 / 0.08);
+        transform: translateY(-1px);
+      }
+
+      .admin-action:focus-visible {
+        outline: 3px solid rgb(241 111 28 / 0.5);
+        outline-offset: 3px;
+      }
+
+      .admin-action[hidden] {
+        display: none;
+      }
+
+      .admin-action-icon {
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+      }
+
       main {
         min-height: calc(100vh - 80px);
         background: rgb(0, 83, 94);
@@ -370,6 +414,10 @@
           padding: 0 20px;
         }
 
+        .logo {
+          width: min(200px, 42vw);
+        }
+
         main {
           min-height: calc(100vh - 72px);
           padding: 40px 20px 120px;
@@ -400,6 +448,15 @@
   <body>
     <header class="appbar">
       <img class="logo" src="wcu-torch-logo-teal.svg" alt="West Coast University">
+      <a class="admin-action" id="admin-action" href="/.auth/login/aad?post_login_redirect_uri=/" aria-label="Admin sign in" title="Admin sign in" hidden>
+        <svg class="admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 19.25V13.5M10 19.25V9.5M16 19.25V4.75M3 19.25h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="4" cy="10.5" r="1.5" fill="currentColor"/>
+          <circle cx="10" cy="6.5" r="1.5" fill="currentColor"/>
+          <circle cx="16" cy="2.75" r="1.5" fill="currentColor"/>
+        </svg>
+        <span id="admin-action-text">Admin sign in</span>
+      </a>
     </header>
 
     <main>
@@ -459,6 +516,8 @@
         const feedbackRating = document.querySelector(".feedback-rating");
         const feedbackStatus = document.querySelector(".feedback-status");
         const feedbackSubmit = document.querySelector(".feedback-submit");
+        const adminAction = document.querySelector("#admin-action");
+        const adminActionText = document.querySelector("#admin-action-text");
         const ratingButtons = document.querySelectorAll("[data-feedback-rating]");
         let selectedRating = null;
         let pendingRequestId = null;
@@ -468,6 +527,27 @@
         radar.className = "chat-radar is-hidden";
         radar.setAttribute("aria-hidden", "true");
         document.body.appendChild(radar);
+
+        function showAdminAction(mode) {
+          const isAdmin = mode === "results";
+          adminAction.href = isAdmin
+            ? "/feedback-results.html"
+            : "/.auth/login/aad?post_login_redirect_uri=/";
+          adminAction.setAttribute("aria-label", isAdmin ? "View feedback results" : "Admin sign in");
+          adminAction.title = isAdmin ? "View feedback results" : "Admin sign in";
+          adminAction.dataset.mode = isAdmin ? "results" : "sign-in";
+          adminActionText.hidden = isAdmin;
+          adminAction.hidden = false;
+        }
+
+        fetch("/api/feedback-admin-access", { cache: "no-store" })
+          .then((response) => {
+            if (response.ok) showAdminAction("results");
+            else if (response.status === 401) showAdminAction("sign-in");
+          })
+          .catch(() => {
+            // If access cannot be determined, keep the admin action hidden.
+          });
 
         ratingButtons.forEach((button) => {
           button.addEventListener("click", () => {
