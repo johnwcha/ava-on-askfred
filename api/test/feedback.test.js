@@ -16,9 +16,15 @@ test("accepts a valid rating with an optional comment", () => {
   );
 });
 
-test("accepts a rating without a comment", () => {
-  const result = validateFeedback({ rating: "negative" });
+test("accepts a positive rating without a comment", () => {
+  const result = validateFeedback({ rating: "positive" });
   assert.equal(result.value.comment, "");
+});
+
+test("rejects a negative rating without a comment", () => {
+  assert.deepEqual(validateFeedback({ rating: "negative", comment: "   " }), {
+    error: "Comment is required for a negative rating."
+  });
 });
 
 test("rejects an unsupported rating", () => {

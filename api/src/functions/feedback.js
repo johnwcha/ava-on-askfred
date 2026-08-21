@@ -26,6 +26,10 @@ function validateFeedback(payload) {
     return { error: `Comment must be ${MAX_COMMENT_LENGTH} characters or fewer.` };
   }
 
+  if (payload.rating === "negative" && !comment) {
+    return { error: "Comment is required for a negative rating." };
+  }
+
   const page = typeof payload.page === "string" ? payload.page.slice(0, 200) : "/";
 
   return {

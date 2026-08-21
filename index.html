@@ -265,6 +265,10 @@
         line-height: 1.45;
       }
 
+      .feedback-comment[aria-invalid="true"] {
+        border-color: #b42318;
+      }
+
       .feedback-footer {
         display: flex;
         align-items: center;
@@ -496,7 +500,7 @@
               <button type="button" data-feedback-rating="negative" aria-label="Poor experience" aria-pressed="false">👎</button>
             </div>
           </div>
-          <label class="feedback-label" for="feedback-comment">Additional feedback (optional)</label>
+          <label class="feedback-label" id="feedback-comment-label" for="feedback-comment">Additional feedback (optional)</label>
           <textarea class="feedback-comment" id="feedback-comment" maxlength="1000" placeholder="Tell us what worked—or what we could improve."></textarea>
           <div class="feedback-footer">
             <span class="feedback-privacy">Please don’t include private student information.</span>
@@ -513,6 +517,7 @@
         const widgetOrigin = "https://platform.collegevine.com";
         const feedbackPanel = document.querySelector(".feedback-panel");
         const feedbackComment = document.querySelector(".feedback-comment");
+        const feedbackCommentLabel = document.querySelector("#feedback-comment-label");
         const feedbackRating = document.querySelector(".feedback-rating");
         const feedbackStatus = document.querySelector(".feedback-status");
         const feedbackSubmit = document.querySelector(".feedback-submit");
@@ -549,9 +554,22 @@
             // If access cannot be determined, keep the admin action hidden.
           });
 
+        function updateCommentRequirement() {
+          const isRequired = selectedRating === "negative";
+          feedbackComment.required = isRequired;
+          feedbackCommentLabel.textContent = isRequired
+            ? "Additional feedback (required)"
+            : "Additional feedback (optional)";
+          feedbackComment.placeholder = isRequired
+            ? "Tell us what we could improve."
+            : "Tell us what worked—or what we could improve.";
+          if (!isRequired) feedbackComment.removeAttribute("aria-invalid");
+        }
+
         ratingButtons.forEach((button) => {
           button.addEventListener("click", () => {
             selectedRating = button.dataset.feedbackRating;
+            updateCommentRequirement();
             feedbackRating.classList.remove("has-error");
             feedbackStatus.classList.remove("is-error");
             feedbackStatus.textContent = "";
@@ -559,6 +577,14 @@
               ratingButton.setAttribute("aria-pressed", String(ratingButton === button));
             });
           });
+        });
+
+        feedbackComment.addEventListener("input", () => {
+          if (feedbackComment.value.trim()) {
+            feedbackComment.removeAttribute("aria-invalid");
+            feedbackStatus.classList.remove("is-error");
+            feedbackStatus.textContent = "";
+          }
         });
 
         feedbackPanel?.addEventListener("submit", async (event) => {
@@ -569,6 +595,14 @@
             feedbackStatus.classList.add("is-error");
             feedbackStatus.textContent = "Choose thumbs up or thumbs down before submitting.";
             ratingButtons[0]?.focus();
+            return;
+          }
+
+          if (selectedRating === "negative" && !feedbackComment.value.trim()) {
+            feedbackComment.setAttribute("aria-invalid", "true");
+            feedbackStatus.classList.add("is-error");
+            feedbackStatus.textContent = "Tell us what we could improve before submitting.";
+            feedbackComment.focus();
             return;
           }
 
@@ -598,6 +632,8 @@
             selectedRating = null;
             pendingRequestId = null;
             feedbackComment.value = "";
+            feedbackComment.removeAttribute("aria-invalid");
+            updateCommentRequirement();
             ratingButtons.forEach((button) => button.setAttribute("aria-pressed", "false"));
             feedbackStatus.textContent = "Thank you. Your feedback was submitted.";
           } catch (error) {
