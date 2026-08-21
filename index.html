@@ -274,14 +274,7 @@
       }
 
       body.chat-is-expanded .feedback-panel {
-        position: fixed;
-        left: var(--feedback-left, 24px);
-        bottom: var(--feedback-bottom, 24px);
-        z-index: 2147483643;
-        width: var(--feedback-width, 440px);
-        max-height: calc(100vh - 48px);
-        margin: 0;
-        overflow: auto;
+        scroll-margin-block: 24px;
       }
 
       .chat-radar {
@@ -339,6 +332,23 @@
 
         .feedback-rating button {
           transition: none;
+        }
+      }
+
+      @media (min-width: 1200px) {
+        body.chat-is-expanded main {
+          grid-template-columns: minmax(220px, 0.75fr) minmax(340px, 1.25fr) var(--chat-column-width, 425px);
+          align-items: start;
+          gap: clamp(24px, 3vw, 56px);
+          padding: 48px var(--chat-right-inset, 16px) 100px clamp(24px, 4vw, 72px);
+        }
+
+        body.chat-is-expanded .intro {
+          padding-top: 24px;
+        }
+
+        body.chat-is-expanded .details {
+          max-width: none;
         }
       }
 
@@ -452,6 +462,8 @@
         const ratingButtons = document.querySelectorAll("[data-feedback-rating]");
         let selectedRating = null;
         let pendingRequestId = null;
+        let chatWasExpanded = false;
+        let observedChatIframe = null;
         const radar = document.createElement("div");
         radar.className = "chat-radar is-hidden";
         radar.setAttribute("aria-hidden", "true");
@@ -518,34 +530,53 @@
           }
         });
 
-        function updateFeedbackPosition(rect, isExpanded) {
+        function updateChatLayout(rect, isExpanded) {
+          const justExpanded = isExpanded && !chatWasExpanded;
           document.body.classList.toggle("chat-is-expanded", isExpanded);
 
-          if (!isExpanded || !feedbackPanel) return;
+          if (!isExpanded) {
+            document.body.style.removeProperty("--chat-column-width");
+            document.body.style.removeProperty("--chat-right-inset");
+            chatWasExpanded = false;
+            return;
+          }
 
-          const gutter = 16;
-          const pageInset = 24;
-          const availableWidth = rect.left - pageInset - gutter;
-          const panelWidth = Math.max(280, Math.min(440, availableWidth));
-          const panelLeft = Math.max(pageInset, rect.left - panelWidth - gutter);
-          const panelBottom = Math.max(pageInset, window.innerHeight - rect.bottom + pageInset);
+          document.body.style.setProperty("--chat-column-width", `${Math.ceil(rect.width)}px`);
+          document.body.style.setProperty("--chat-right-inset", `${Math.max(12, Math.ceil(window.innerWidth - rect.right))}px`);
+          chatWasExpanded = true;
 
-          document.body.style.setProperty("--feedback-left", `${panelLeft}px`);
-          document.body.style.setProperty("--feedback-width", `${panelWidth}px`);
-          document.body.style.setProperty("--feedback-bottom", `${panelBottom}px`);
+          if (justExpanded && feedbackPanel) {
+            const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+            window.requestAnimationFrame(() => {
+              feedbackPanel.scrollIntoView({ behavior, block: "center" });
+            });
+          }
         }
 
         function updateRadar() {
           const iframe = document.querySelector("#cv-webchat-iframe");
           if (!iframe) {
+            if (observedChatIframe) {
+              chatResizeObserver.disconnect();
+              observedChatIframe = null;
+            }
             radar.classList.add("is-hidden");
             document.body.classList.remove("chat-is-expanded");
+            document.body.style.removeProperty("--chat-column-width");
+            document.body.style.removeProperty("--chat-right-inset");
+            chatWasExpanded = false;
             return;
+          }
+
+          if (observedChatIframe !== iframe) {
+            chatResizeObserver.disconnect();
+            chatResizeObserver.observe(iframe);
+            observedChatIframe = iframe;
           }
 
           const rect = iframe.getBoundingClientRect();
           const isExpanded = rect.height > 180 || rect.width > 520;
-          updateFeedbackPosition(rect, isExpanded);
+          updateChatLayout(rect, isExpanded);
 
           if (isExpanded) {
             radar.classList.add("is-hidden");
@@ -561,15 +592,15 @@
           radar.classList.remove("is-hidden");
         }
 
+        const chatResizeObserver = new ResizeObserver(updateRadar);
         window.addEventListener("resize", updateRadar);
         window.addEventListener("message", (event) => {
           if (event.origin !== widgetOrigin || event.data?.messageType !== "cv-webchat") return;
           if (event.data.expanded) {
             radar.classList.add("is-hidden");
-            updateRadar();
-          } else {
-            updateRadar();
           }
+          window.setTimeout(updateRadar, 100);
+          window.setTimeout(updateRadar, 350);
         });
 
         const interval = window.setInterval(updateRadar, 250);
