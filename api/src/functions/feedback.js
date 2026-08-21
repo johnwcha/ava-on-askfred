@@ -1,4 +1,5 @@
 const { randomUUID } = require("node:crypto");
+const { app } = require("@azure/functions");
 const { getOrCreateFeedbackTableClient } = require("../lib/feedback-store");
 
 const MAX_COMMENT_LENGTH = 1000;
@@ -93,6 +94,11 @@ async function feedbackHandler(request, context) {
   }
 }
 
-// Survey submissions are paused. Restore the app.http registration here to re-enable POST /api/feedback.
+app.http("feedback", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  route: "feedback",
+  handler: feedbackHandler
+});
 
 module.exports = { feedbackHandler, validateFeedback };

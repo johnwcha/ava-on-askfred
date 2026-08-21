@@ -6,7 +6,7 @@ This repository contains a test page for the CollegeVine Trellis webchat embed.
 
 ## Feedback API
 
-The landing-page survey and `POST /api/feedback` registration are currently disabled. The handler remains in the codebase so collection can be restored later.
+The landing-page survey posts to `POST /api/feedback`. The managed Azure Function stores responses in Azure Table Storage.
 
 Configure these application settings in the Azure Static Web App:
 
