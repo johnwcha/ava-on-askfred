@@ -1,6 +1,5 @@
 const { randomUUID } = require("node:crypto");
-const { app } = require("@azure/functions");
-const { getFeedbackTableClient } = require("../lib/feedback-store");
+const { getOrCreateFeedbackTableClient } = require("../lib/feedback-store");
 
 const MAX_COMMENT_LENGTH = 1000;
 const VALID_RATINGS = new Set(["positive", "negative"]);
@@ -60,7 +59,7 @@ async function feedbackHandler(request, context) {
   const partitionKey = submittedAt.slice(0, 7);
 
   try {
-    const client = await getFeedbackTableClient();
+    const client = await getOrCreateFeedbackTableClient();
     await client.createEntity({
       partitionKey,
       rowKey,
@@ -94,11 +93,6 @@ async function feedbackHandler(request, context) {
   }
 }
 
-app.http("feedback", {
-  methods: ["POST"],
-  authLevel: "anonymous",
-  route: "feedback",
-  handler: feedbackHandler
-});
+// Survey submissions are paused. Restore the app.http registration here to re-enable POST /api/feedback.
 
 module.exports = { feedbackHandler, validateFeedback };

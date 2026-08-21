@@ -115,6 +115,14 @@ async function feedbackResultsHandler(request, context) {
       }
     };
   } catch (error) {
+    if (error.statusCode === 404) {
+      return {
+        status: 200,
+        headers: { "Cache-Control": "no-store" },
+        jsonBody: { responses: [], truncated: false, periodDays: days }
+      };
+    }
+
     context.error("Feedback results query failed", error.message);
     return {
       status: 500,
